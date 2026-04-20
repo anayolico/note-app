@@ -150,6 +150,23 @@
 .footer-item { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; }
 .footer-item:hover { color: var(--text-primary); background: var(--card-hover); }
 
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--card-bg) 25%, var(--card-hover) 50%, var(--card-bg) 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 2.5s infinite linear;
+  border-radius: 8px;
+}
+
 @media (max-width: 768px) {
   .dashboard-layout.mobile { flex-direction: column; }
   .sidebar { width: 100%; border-right: none; }

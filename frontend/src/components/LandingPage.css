@@ -98,6 +98,31 @@
   border: 1px solid #e5e7eb !important;
   padding: 0.9rem 1.8rem !important;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.google-auth-btn::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 20%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: rotate(30deg);
+  animation: shiny 3s infinite;
+}
+
+@keyframes shiny {
+  0% { left: -60%; }
+  20% { left: 120%; }
+  100% { left: 120%; }
 }
 
 .promo-text { margin-top: 2rem; color: #9ca3af; font-size: 0.85rem; }
@@ -115,6 +140,20 @@
 .footer-top p { color: #111827; font-weight: 600; font-size: 0.95rem; }
 .footer-links { display: flex; gap: 2rem; }
 .footer-links a { color: #6b7280; font-size: 0.9rem; font-weight: 400; text-decoration: none; }
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #4285F4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 @media (max-width: 768px) {
   .hero-title { font-size: 2.5rem; }

@@ -12,6 +12,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import './Dashboard.css';
+import LoadingOverlay from './LoadingOverlay';
 
 interface Note {
   id: string;
@@ -172,19 +173,7 @@ const Dashboard: React.FC = () => {
   );
 
   if (loading) {
-    return (
-      <div className="dashboard-layout">
-        <aside className="sidebar">
-          <div className="sidebar-header"><div className="skeleton" style={{width: '100px', height: '24px'}}></div></div>
-          <div className="note-list">
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{height: '60px', margin: '1rem', borderRadius: '8px'}}></div>)}
-          </div>
-        </aside>
-        <main className="main-content">
-          <div className="skeleton" style={{margin: '5rem', height: '300px', borderRadius: '12px', opacity: 0.5}}></div>
-        </main>
-      </div>
-    );
+    return <LoadingOverlay />;
   }
 
   // Mobile View Logic
