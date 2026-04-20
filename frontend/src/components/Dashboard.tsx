@@ -130,10 +130,6 @@ const Dashboard: React.FC = () => {
     debounceSave(selectedNote.id, updatedNote.title, updatedNote.content);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
 
   const filteredNotes = notes.filter(n => 
     n.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
