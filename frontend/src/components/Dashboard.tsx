@@ -39,23 +39,25 @@ const Dashboard: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch Session and Sync User
+  // Auth and Session Handling
   useEffect(() => {
     let mounted = true;
-    
+    let hasFoundSession = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event, !!session);
       
-      // If we find a session, process it
       if (session && mounted) {
+        hasFoundSession = true;
         setUser(session.user);
+        
         try {
-          // Fetch notes first for better UX
+          // Fetch data
           const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
           const data = await res.json();
           if (mounted) setNotes(data || []);
           
-          // Sync user in background
+          // Sync user
           fetch(`${API_URL}/api/users/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -66,7 +68,6 @@ const Dashboard: React.FC = () => {
               avatar_url: session.user.user_metadata?.avatar_url,
             }),
           }).catch(e => console.error('Sync failed:', e));
-
         } catch (err) {
           console.error('Data fetch error:', err);
         } finally {
@@ -74,36 +75,34 @@ const Dashboard: React.FC = () => {
         }
       } 
       
-      // Handle navigation away ONLY on explicit sign out or if truly empty after settling
-      if (event === 'SIGNED_OUT') {
-        if (mounted) navigate('/');
-        return;
-      }
-
-      // If it's the initial check and we have no session, wait a bit for OAuth to settle
-      if (event === 'INITIAL_SESSION' && !session) {
-        const hash = window.location.hash;
-        const isRedirecting = hash.includes('access_token=') || 
-                            hash.includes('id_token=') || 
-                            hash.includes('refresh_token=') ||
-                            hash.includes('error=');
-        
-        // Wait longer if we see an auth fragment to allow for processing and clock skew
-        const waitTime = isRedirecting ? 5000 : 3000;
-        
-        const timer = setTimeout(async () => {
-          if (mounted) {
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            if (!currentSession) {
-              console.log('No session detected after wait, redirecting to landing...');
-              navigate('/');
-            }
-          }
-        }, waitTime);
-
-        return () => clearTimeout(timer);
+      if (event === 'SIGNED_OUT' && mounted) {
+        navigate('/');
       }
     });
+
+    // Check if we need to redirect after a patient wait
+    const checkAuthStatus = async () => {
+      const hash = window.location.hash;
+      const isRedirecting = hash.includes('access_token=') || 
+                          hash.includes('id_token=') || 
+                          hash.includes('refresh_token=') ||
+                          hash.includes('error=');
+      
+      // Wait longer if we are in an OAuth flow
+      const waitTime = isRedirecting ? 6000 : 3000;
+      
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      if (mounted && !hasFoundSession) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession && !hasFoundSession) {
+          console.log('No session detected after wait, redirecting to landing...');
+          navigate('/');
+        }
+      }
+    };
+
+    checkAuthStatus();
 
     return () => {
       mounted = false;

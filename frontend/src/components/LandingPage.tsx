@@ -24,7 +24,7 @@ const LandingPage: React.FC = () => {
           navigate('/dashboard');
         }
       }
-    }, 1500);
+    }, 2000);
 
     return () => {
       mounted = false;
