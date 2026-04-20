@@ -41,38 +41,43 @@ const Dashboard: React.FC = () => {
 
   // Fetch Session and Sync User
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/');
-        return;
-      }
-      setUser(session.user);
+    let authChecked = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event, !!session);
       
-      try {
-        await fetch(`${API_URL}/api/users/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: session.user.id,
-            email: session.user.email,
-            full_name: session.user.user_metadata?.full_name,
-            avatar_url: session.user.user_metadata?.avatar_url,
-          }),
-        });
-
-        // Fetch User Notes
-        const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
-        const data = await res.json();
-        setNotes(data || []);
-      } catch (err) {
-        console.error('Error during init:', err);
-      } finally {
-        setLoading(false);
+      if (session) {
+        setUser(session.user);
+        try {
+          const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
+          const data = await res.json();
+          setNotes(data || []);
+          
+          await fetch(`${API_URL}/api/users/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: session.user.id,
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name,
+              avatar_url: session.user.user_metadata?.avatar_url,
+            }),
+          });
+        } catch (err) {
+          console.error('Data fetch error:', err);
+        } finally {
+          setLoading(false);
+          authChecked = true;
+        }
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+        // Give it a small window to process hash before bouncing
+        setTimeout(() => {
+          if (!authChecked) navigate('/');
+        }, 1000);
       }
-    };
+    });
 
-    fetchData();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const createNote = async () => {

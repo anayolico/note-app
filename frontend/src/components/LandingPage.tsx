@@ -1,9 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import { supabase } from '../lib/supabase';
 import './LandingPage.css';
 
 const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && event !== 'SIGNED_OUT') {
+        navigate('/dashboard');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
