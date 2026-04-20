@@ -8,12 +8,29 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    let mounted = true;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && event !== 'SIGNED_OUT') {
+      if (session && event !== 'SIGNED_OUT' && mounted) {
         navigate('/dashboard');
       }
     });
-    return () => subscription.unsubscribe();
+
+    // Check session again after a short delay to account for clock skew/OAuth settling
+    const timer = setTimeout(async () => {
+      if (mounted) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/dashboard');
+        }
+      }
+    }, 1500);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, [navigate]);
 
   const handleGoogleLogin = async () => {
@@ -66,13 +83,13 @@ const LandingPage: React.FC = () => {
 
       <footer className="footer">
         <div className="footer-top">
-          <p>© 2024 Mindful Canvas. Designed for the Ethereal Atelier.</p>
+          <p>© {new Date().getFullYear()} Mindful Canvas. Designed for the Ethereal Atelier.</p>
         </div>
-        <div className="footer-links">
+        {/* <div className="footer-links">
           <a href="#privacy">Privacy</a>
           <a href="#terms">Terms</a>
           <a href="#studio">Studio</a>
-        </div>
+        </div> */}
       </footer>
     </div>
   );

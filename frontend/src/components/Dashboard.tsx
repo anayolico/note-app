@@ -82,16 +82,26 @@ const Dashboard: React.FC = () => {
 
       // If it's the initial check and we have no session, wait a bit for OAuth to settle
       if (event === 'INITIAL_SESSION' && !session) {
-        const isRedirecting = window.location.hash.includes('access_token=');
-        setTimeout(() => {
+        const hash = window.location.hash;
+        const isRedirecting = hash.includes('access_token=') || 
+                            hash.includes('id_token=') || 
+                            hash.includes('refresh_token=') ||
+                            hash.includes('error=');
+        
+        // Wait longer if we see an auth fragment to allow for processing and clock skew
+        const waitTime = isRedirecting ? 5000 : 3000;
+        
+        const timer = setTimeout(async () => {
           if (mounted) {
-            supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-              if (!currentSession && !isRedirecting) {
-                navigate('/');
-              }
-            });
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession) {
+              console.log('No session detected after wait, redirecting to landing...');
+              navigate('/');
+            }
           }
-        }, 2000);
+        }, waitTime);
+
+        return () => clearTimeout(timer);
       }
     });
 

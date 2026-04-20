@@ -12,7 +12,10 @@ const cookieStorage = {
   getItem: (key: string) => {
     if (typeof document === 'undefined') return null;
     const cookies = document.cookie.split('; ');
-    const cookie = cookies.find((row) => row.startsWith(`${key}=`));
+    const cookie = cookies.find((row) => {
+      const [name] = row.split('=');
+      return name.trim() === key;
+    });
     return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
   },
   setItem: (key: string, value: string) => {
