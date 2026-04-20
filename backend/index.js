@@ -15,6 +15,38 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Automatic Database Initialization
+const initDb = async () => {
+  try {
+    console.log('Initializing database tables...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        full_name TEXT,
+        avatar_url TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS notes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT DEFAULT 'New Note',
+        content TEXT DEFAULT '',
+        is_trash BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Database tables initialized successfully.');
+  } catch (err) {
+    console.error('Failed to initialize database tables:', err);
+  }
+};
+
+initDb();
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Mindful Canvas API is running' });

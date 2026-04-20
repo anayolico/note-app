@@ -18,6 +18,8 @@ interface Note {
   updated_at: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -38,7 +40,7 @@ const Dashboard: React.FC = () => {
       setUser(session.user);
       
       try {
-        await fetch('http://localhost:3001/api/users/sync', {
+        await fetch(`${API_URL}/api/users/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -50,7 +52,7 @@ const Dashboard: React.FC = () => {
         });
 
         // Fetch User Notes
-        const res = await fetch(`http://localhost:3001/api/notes?userId=${session.user.id}`);
+        const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
         const data = await res.json();
         setNotes(data || []);
       } catch (err) {
@@ -66,7 +68,7 @@ const Dashboard: React.FC = () => {
   const createNote = async () => {
     if (!user) return;
     try {
-      const res = await fetch('http://localhost:3001/api/notes', {
+      const res = await fetch(`${API_URL}/api/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -82,7 +84,7 @@ const Dashboard: React.FC = () => {
   const deleteNote = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      await fetch(`http://localhost:3001/api/notes/${id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/notes/${id}`, { method: 'DELETE' });
       setNotes(notes.filter(n => n.id !== id));
       if (selectedNote?.id === id) setSelectedNote(null);
     } catch (err) {
@@ -95,7 +97,7 @@ const Dashboard: React.FC = () => {
       setSaveStatus('saving');
       const timer = setTimeout(async () => {
         try {
-          await fetch(`http://localhost:3001/api/notes/${noteId}`, {
+          await fetch(`${API_URL}/api/notes/${noteId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, content }),
