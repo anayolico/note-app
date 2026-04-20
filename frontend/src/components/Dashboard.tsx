@@ -12,6 +12,7 @@ import {
   Menu,
   ChevronLeft
 } from 'lucide-react';
+import './Dashboard.css';
 
 interface Note {
   id: string;

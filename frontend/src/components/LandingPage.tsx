@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from './Header';
 import { supabase } from '../lib/supabase';
+import './LandingPage.css';
 
 const LandingPage: React.FC = () => {
   const handleGoogleLogin = async () => {
