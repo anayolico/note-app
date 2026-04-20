@@ -41,22 +41,22 @@ const Dashboard: React.FC = () => {
 
   // Fetch Session and Sync User
   useEffect(() => {
-    let authChecked = false;
-    // Special check: If URL has a hash containing access_token, we are in the middle of a redirect
-    const isRedirecting = window.location.hash.includes('access_token=');
-
+    let mounted = true;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event, !!session);
       
-      if (session) {
-        authChecked = true;
+      // If we find a session, process it
+      if (session && mounted) {
         setUser(session.user);
         try {
+          // Fetch notes first for better UX
           const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
           const data = await res.json();
-          setNotes(data || []);
+          if (mounted) setNotes(data || []);
           
-          await fetch(`${API_URL}/api/users/sync`, {
+          // Sync user in background
+          fetch(`${API_URL}/api/users/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -65,27 +65,40 @@ const Dashboard: React.FC = () => {
               full_name: session.user.user_metadata?.full_name,
               avatar_url: session.user.user_metadata?.avatar_url,
             }),
-          });
+          }).catch(e => console.error('Sync failed:', e));
+
         } catch (err) {
           console.error('Data fetch error:', err);
         } finally {
-          setLoading(false);
+          if (mounted) setLoading(false);
         }
-      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-        // If we are definitely redirecting, don't bounce home even if session is null initially
-        if (isRedirecting) {
-            console.log('Detected auth hash, waiting for session...');
-            return; 
-        }
+      } 
+      
+      // Handle navigation away ONLY on explicit sign out or if truly empty after settling
+      if (event === 'SIGNED_OUT') {
+        if (mounted) navigate('/');
+        return;
+      }
 
-        // Give it a small window for edge cases
+      // If it's the initial check and we have no session, wait a bit for OAuth to settle
+      if (event === 'INITIAL_SESSION' && !session) {
+        const isRedirecting = window.location.hash.includes('access_token=');
         setTimeout(() => {
-          if (!authChecked) navigate('/');
-        }, 1500);
+          if (mounted) {
+            supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+              if (!currentSession && !isRedirecting) {
+                navigate('/');
+              }
+            });
+          }
+        }, 2000);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const createNote = async () => {
