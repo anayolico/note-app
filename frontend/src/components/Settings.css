@@ -1,0 +1,140 @@
+.settings-page {
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  color: white;
+  padding-bottom: 5rem;
+}
+
+.settings-header {
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+
+.settings-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.settings-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.settings-section {
+  margin-bottom: 3rem;
+}
+
+.settings-section h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #71717a;
+  margin-bottom: 1rem;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--bg-sidebar);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.avatar-wrapper img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #18181b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #52525b;
+}
+
+.profile-info h3 { font-size: 1.25rem; margin-bottom: 4px; }
+.profile-info p { color: #71717a; font-size: 0.95rem; }
+
+.settings-list {
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-item:last-child { border-bottom: none; }
+
+.item-label {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #d1d5db;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  background: #27272a;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.toggle.active { background: var(--primary); }
+.toggle.active::after { left: 22px; }
+
+.text-btn { background: transparent; color: var(--primary); font-size: 0.9rem; padding: 0; }
+
+.danger-zone {
+  margin-top: 4rem;
+}
+
+.sign-out-btn {
+  width: 100%;
+  background: #ef4444;
+  color: white;
+  padding: 1rem;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.sign-out-btn:hover { opacity: 0.9; }
+
+@media (max-width: 640px) {
+  .settings-header { padding: 1rem; gap: 1rem; }
+  .settings-content { padding: 1.5rem 1rem; }
+  .profile-card { padding: 1.5rem; }
+}

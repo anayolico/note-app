@@ -168,9 +168,14 @@ const Dashboard: React.FC = () => {
         <aside className="sidebar">
           <div className="sidebar-header">
             <h2>Notes</h2>
-            <button className="new-note-btn circle" onClick={createNote}>
-              <Plus size={20} />
-            </button>
+            <div className="header-actions">
+              <button className="icon-btn" onClick={() => navigate('/settings')} title="Settings">
+                <Settings size={18} />
+              </button>
+              <button className="new-note-btn circle" onClick={createNote}>
+                <Plus size={20} />
+              </button>
+            </div>
           </div>
 
           <div className="search-container">
@@ -211,9 +216,9 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="sidebar-footer">
-            <div className="footer-item" onClick={handleLogout}>
+            <div className="footer-item" onClick={() => navigate('/settings')}>
               <Settings size={18} />
-              <span>Sign Out</span>
+              <span>Settings</span>
             </div>
           </div>
         </aside>
