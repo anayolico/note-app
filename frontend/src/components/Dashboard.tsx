@@ -9,7 +9,6 @@ import {
   PenTool, 
   CheckCircle,
   Clock,
-  Menu,
   ChevronLeft
 } from 'lucide-react';
 import './Dashboard.css';
@@ -31,7 +30,14 @@ const Dashboard: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Resize listener
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch Session and Sync User
   useEffect(() => {
@@ -80,7 +86,6 @@ const Dashboard: React.FC = () => {
       const newNote = await res.json();
       setNotes([newNote, ...notes]);
       setSelectedNote(newNote);
-      setSidebarOpen(false); // Close sidebar on mobile
     } catch (err) {
       console.error('Create note error:', err);
     }
@@ -108,7 +113,6 @@ const Dashboard: React.FC = () => {
             body: JSON.stringify({ title, content }),
           });
           setSaveStatus('saved');
-          // Update local note list snippet without full refetch
           setNotes(prev => prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n));
         } catch (err) {
           console.error('Auto-save error:', err);
@@ -136,11 +140,6 @@ const Dashboard: React.FC = () => {
     n.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleNoteSelect = (note: Note) => {
-    setSelectedNote(note);
-    setSidebarOpen(false);
-  };
-
   if (loading) {
     return (
       <div className="dashboard-layout">
@@ -157,120 +156,117 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Mobile View Logic
+  const showListOnMobile = isMobile && !selectedNote;
+  const showEditorOnMobile = isMobile && selectedNote;
+
   return (
-    <div className="dashboard-layout">
-      {/* Mobile Header */}
-      <div className="mobile-header">
-        <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-          <Menu size={24} />
-        </button>
-        <span className="brand-name" style={{fontSize: '1rem', color: 'white'}}>Mindful Canvas</span>
-        <button className="new-note-btn" onClick={createNote} style={{padding: '4px'}}>
-          <Plus size={20} />
-        </button>
-      </div>
-
-      {/* Sidebar Overlay */}
-      <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)}></div>
-
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-             <button className="menu-toggle" onClick={() => setSidebarOpen(false)} style={{display: 'none'}} id="sidebar-close-btn">
-                <ChevronLeft size={24} />
-             </button>
-             <h2>Notes</h2>
+    <div className={`dashboard-layout ${isMobile ? 'mobile' : ''}`}>
+      
+      {/* Sidebar / List View */}
+      {(showListOnMobile || !isMobile) && (
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <h2>Notes</h2>
+            <button className="new-note-btn circle" onClick={createNote}>
+              <Plus size={20} />
+            </button>
           </div>
-          <button className="new-note-btn" onClick={createNote}>
-            <Plus size={18} /> New
-          </button>
-        </div>
 
-        <div className="search-container">
-          <div className="search-wrapper">
-            <Search className="search-icon" size={16} />
-            <input 
-              placeholder="Search notes..." 
-              className="search-bar"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="search-container">
+            <div className="search-wrapper">
+              <Search className="search-icon" size={16} />
+              <input 
+                placeholder="Search notes..." 
+                className="search-bar"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="note-list">
-          {filteredNotes.map((note, index) => (
-            <div 
-              key={note.id} 
-              className={`note-item fade-in ${selectedNote?.id === note.id ? 'active' : ''}`}
-              style={{ animationDelay: `${index * 0.05}s` }}
-              onClick={() => handleNoteSelect(note)}
-            >
-              <div className="note-item-header">
-                <span className="note-item-title">{note.title || 'Untitled'}</span>
-                <span className="note-item-time">{new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="note-list">
+            {filteredNotes.length > 0 ? (
+              filteredNotes.map((note, index) => (
+                <div 
+                  key={note.id} 
+                  className={`note-item fade-in ${selectedNote?.id === note.id ? 'active' : ''}`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={() => setSelectedNote(note)}
+                >
+                  <div className="note-item-header">
+                    <span className="note-item-title">{note.title || 'Untitled'}</span>
+                    <span className="note-item-time">{new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p className="note-item-preview">{note.content || 'No additional text'}</p>
+                </div>
+              ))
+            ) : (
+                <div className="empty-notes-list">
+                  <PenTool size={40} className="empty-icon" />
+                  <p>No notes found</p>
+                  <button onClick={createNote} className="create-first-btn">Create your first note</button>
+                </div>
+            )}
+          </div>
+
+          <div className="sidebar-footer">
+            <div className="footer-item" onClick={handleLogout}>
+              <Settings size={18} />
+              <span>Sign Out</span>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* Editor / Main Content Area */}
+      {(showEditorOnMobile || !isMobile) && (
+        <main className="main-content">
+          {selectedNote ? (
+            <div className="editor-container fade-in" key={selectedNote.id}>
+              <div className="editor-nav">
+                {isMobile && (
+                  <button className="back-btn" onClick={() => setSelectedNote(null)}>
+                    <ChevronLeft size={24} />
+                  </button>
+                )}
+                
+                <div className="editor-actions">
+                  <button 
+                    className="delete-btn" 
+                    onClick={(e) => deleteNote(selectedNote.id, e)}
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                  <div className="save-indicator">
+                    {saveStatus === 'saving' && <Clock size={14} className="saving" />}
+                    {saveStatus === 'saved' && <CheckCircle size={14} />}
+                  </div>
+                </div>
               </div>
-              <p className="note-item-preview">{note.content || 'Start typing...'}</p>
-            </div>
-          ))}
-        </div>
 
-        <div className="sidebar-footer">
-          <div className="footer-item">
-            <Trash2 size={18} />
-            <span>Trash</span>
-          </div>
-          <div className="footer-item" onClick={handleLogout}>
-            <Settings size={18} />
-            <span>Settings / Logout</span>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="main-content">
-        {selectedNote ? (
-          <div className="editor-container fade-in" key={selectedNote.id}>
-            <div className="editor-header">
-              <button 
-                className="delete-note-btn" 
-                onClick={(e) => deleteNote(selectedNote.id, e)}
-                title="Move to trash"
-              >
-                <Trash2 size={20} />
-              </button>
-              
-              <div className="save-status">
-                {saveStatus === 'saving' && <span><Clock size={12} className="saving-icon" /> Saving...</span>}
-                {saveStatus === 'saved' && <span><CheckCircle size={12} /> Saved</span>}
-              </div>
+              <input 
+                className="editor-title"
+                value={selectedNote.title}
+                onChange={(e) => handleEditorChange('title', e.target.value)}
+                placeholder="Title"
+              />
+              <textarea 
+                className="editor-content"
+                value={selectedNote.content}
+                onChange={(e) => handleEditorChange('content', e.target.value)}
+                placeholder="Start writing..."
+              />
             </div>
-
-            <input 
-              className="editor-title"
-              value={selectedNote.title}
-              onChange={(e) => handleEditorChange('title', e.target.value)}
-              placeholder="Note Title"
-            />
-            <textarea 
-              className="editor-content"
-              value={selectedNote.content}
-              onChange={(e) => handleEditorChange('content', e.target.value)}
-              placeholder="Your thoughts go here..."
-            />
-          </div>
-        ) : (
-          <div className="empty-state fade-in">
-            <div className="empty-icon"><PenTool size={80} /></div>
-            <h2>Select a note to start editing</h2>
-            <div className="shortcut-hint">
-              <span><span className="key">⌘</span> + N &nbsp; new note</span>
-              <span><span className="key">⌘</span> + K &nbsp; search</span>
+          ) : (
+            <div className="empty-state desktop-only fade-in">
+              <PenTool size={80} className="empty-icon-large" />
+              <h2>Select a note to start editing</h2>
+              <p>Or create a new one to capture your thoughts.</p>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      )}
     </div>
   );
 };
