@@ -8,7 +8,9 @@ import {
   Settings, 
   PenTool, 
   CheckCircle,
-  Clock
+  Clock,
+  Menu,
+  ChevronLeft
 } from 'lucide-react';
 
 interface Note {
@@ -28,6 +30,7 @@ const Dashboard: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch Session and Sync User
   useEffect(() => {
@@ -76,6 +79,7 @@ const Dashboard: React.FC = () => {
       const newNote = await res.json();
       setNotes([newNote, ...notes]);
       setSelectedNote(newNote);
+      setSidebarOpen(false); // Close sidebar on mobile
     } catch (err) {
       console.error('Create note error:', err);
     }
@@ -103,6 +107,7 @@ const Dashboard: React.FC = () => {
             body: JSON.stringify({ title, content }),
           });
           setSaveStatus('saved');
+          // Update local note list snippet without full refetch
           setNotes(prev => prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n));
         } catch (err) {
           console.error('Auto-save error:', err);
@@ -110,8 +115,6 @@ const Dashboard: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timer);
     },
-    // We don't want to recreate this every time notes change, but we need notes for setNotes.
-    // However, setNotes with functional update doesn't need 'notes' in dependency array.
     []
   );
 
@@ -132,6 +135,11 @@ const Dashboard: React.FC = () => {
     n.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleNoteSelect = (note: Note) => {
+    setSelectedNote(note);
+    setSidebarOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="dashboard-layout">
@@ -150,10 +158,29 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-layout">
+      {/* Mobile Header */}
+      <div className="mobile-header">
+        <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
+          <Menu size={24} />
+        </button>
+        <span className="brand-name" style={{fontSize: '1rem', color: 'white'}}>Mindful Canvas</span>
+        <button className="new-note-btn" onClick={createNote} style={{padding: '4px'}}>
+          <Plus size={20} />
+        </button>
+      </div>
+
+      {/* Sidebar Overlay */}
+      <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)}></div>
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h2>Notes</h2>
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+             <button className="menu-toggle" onClick={() => setSidebarOpen(false)} style={{display: 'none'}} id="sidebar-close-btn">
+                <ChevronLeft size={24} />
+             </button>
+             <h2>Notes</h2>
+          </div>
           <button className="new-note-btn" onClick={createNote}>
             <Plus size={18} /> New
           </button>
@@ -177,7 +204,7 @@ const Dashboard: React.FC = () => {
               key={note.id} 
               className={`note-item fade-in ${selectedNote?.id === note.id ? 'active' : ''}`}
               style={{ animationDelay: `${index * 0.05}s` }}
-              onClick={() => setSelectedNote(note)}
+              onClick={() => handleNoteSelect(note)}
             >
               <div className="note-item-header">
                 <span className="note-item-title">{note.title || 'Untitled'}</span>
