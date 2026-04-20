@@ -42,11 +42,14 @@ const Dashboard: React.FC = () => {
   // Fetch Session and Sync User
   useEffect(() => {
     let authChecked = false;
+    // Special check: If URL has a hash containing access_token, we are in the middle of a redirect
+    const isRedirecting = window.location.hash.includes('access_token=');
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event, !!session);
       
       if (session) {
+        authChecked = true;
         setUser(session.user);
         try {
           const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
@@ -67,13 +70,18 @@ const Dashboard: React.FC = () => {
           console.error('Data fetch error:', err);
         } finally {
           setLoading(false);
-          authChecked = true;
         }
       } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-        // Give it a small window to process hash before bouncing
+        // If we are definitely redirecting, don't bounce home even if session is null initially
+        if (isRedirecting) {
+            console.log('Detected auth hash, waiting for session...');
+            return; 
+        }
+
+        // Give it a small window for edge cases
         setTimeout(() => {
           if (!authChecked) navigate('/');
-        }, 1000);
+        }, 1500);
       }
     });
 
