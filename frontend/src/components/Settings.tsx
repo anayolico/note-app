@@ -14,7 +14,9 @@ import './Settings.css';
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
+    (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
+  );
 
   useEffect(() => {
     const getProfile = async () => {
@@ -27,6 +29,30 @@ const Settings: React.FC = () => {
     };
     getProfile();
   }, [navigate]);
+
+  // Apply theme logic
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = (t: 'light' | 'dark' | 'system') => {
+      if (t === 'system') {
+        const systemTheme = mediaQuery.matches ? 'dark' : 'light';
+        root.setAttribute('data-theme', systemTheme);
+      } else {
+        root.setAttribute('data-theme', t);
+      }
+      localStorage.setItem('theme', t);
+    };
+
+    applyTheme(theme);
+
+    const listener = () => {
+      if (theme === 'system') applyTheme('system');
+    };
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, [theme]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
