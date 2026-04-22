@@ -134,6 +134,22 @@ app.patch('/api/notes/:id', async (req, res) => {
   }
 });
 
+// GET all trashed notes for a user
+app.get('/api/notes/trash', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: 'UserID required' });
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM notes WHERE user_id = $1 AND is_trash = true ORDER BY updated_at DESC',
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch trashed notes' });
+  }
+});
+
 // DELETE note (move to trash)
 app.delete('/api/notes/:id', async (req, res) => {
   const { id } = req.params;
@@ -142,6 +158,17 @@ app.delete('/api/notes/:id', async (req, res) => {
     res.json({ message: 'Note moved to trash' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete note' });
+  }
+});
+
+// DELETE note permanently
+app.delete('/api/notes/:id/permanent', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM notes WHERE id = $1', [id]);
+    res.json({ message: 'Note deleted permanently' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to permanently delete note' });
   }
 });
 

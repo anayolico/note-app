@@ -110,8 +110,28 @@
 .editor-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; min-height: 40px; }
 .editor-actions { display: flex; align-items: center; gap: 1.5rem; }
 
-.back-btn { background: transparent; color: var(--text-secondary); padding: 8px; margin-left: -12px; }
-.delete-btn { background: transparent; color: #ef4444; padding: 8px; }
+.delete-btn { background: transparent; color: #ef4444; padding: 8px; transition: all 0.2s; border-radius: 8px; }
+.delete-btn:hover { background: rgba(239, 68, 68, 0.1); }
+.delete-btn.permanent:hover { background: #ef4444; color: white; }
+
+.restore-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.restore-btn:hover {
+  background: var(--card-hover);
+  color: var(--text-primary);
+}
+
 .save-indicator { color: var(--text-secondary); min-width: 20px; }
 .saving { animation: pulse 1s infinite; }
 
@@ -149,6 +169,7 @@
 .sidebar-footer { padding: 1.5rem; border-top: 1px solid var(--border); }
 .footer-item { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; }
 .footer-item:hover { color: var(--text-primary); background: var(--card-hover); }
+.footer-item.active { color: var(--primary); background: var(--primary-glow); border-left: 2px solid var(--primary); border-radius: 0 8px 8px 0; margin-left: -1.5rem; padding-left: calc(1.5rem + 8px); }
 
 @keyframes shimmer {
   0% { background-position: -1000px 0; }

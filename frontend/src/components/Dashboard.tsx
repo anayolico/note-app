@@ -9,7 +9,9 @@ import {
   PenTool, 
   CheckCircle,
   Clock,
-  ChevronLeft
+  ChevronLeft,
+  RotateCcw,
+  Trash
 } from 'lucide-react';
 import './Dashboard.css';
 import LoadingOverlay from './LoadingOverlay';
@@ -21,6 +23,7 @@ interface Note {
   title: string;
   content: string;
   updated_at: string;
+  is_trash: boolean;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -35,6 +38,7 @@ const Dashboard: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isPreview, setIsPreview] = useState(false);
+  const [currentView, setCurrentView] = useState<'notes' | 'trash'>('notes');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedNoteRef = useRef<Note | null>(null);
 
@@ -63,8 +67,9 @@ const Dashboard: React.FC = () => {
         setUser(session.user);
         
         try {
-          // Fetch data
-          const res = await fetch(`${API_URL}/api/notes?userId=${session.user.id}`);
+          // Fetch data based on current view
+          const endpoint = currentView === 'trash' ? '/api/notes/trash' : '/api/notes';
+          const res = await fetch(`${API_URL}${endpoint}?userId=${session.user.id}`);
           const data = await res.json();
           if (mounted) setNotes(data || []);
           
@@ -119,7 +124,7 @@ const Dashboard: React.FC = () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, currentView]);
 
   const createNote = useCallback(async () => {
     if (!user) return;
@@ -158,7 +163,10 @@ const Dashboard: React.FC = () => {
   const deleteNote = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      await fetch(`${API_URL}/api/notes/${id}`, { method: 'DELETE' });
+      const isPermanent = currentView === 'trash';
+      const endpoint = isPermanent ? `/api/notes/${id}/permanent` : `/api/notes/${id}`;
+      
+      await fetch(`${API_URL}${endpoint}`, { method: 'DELETE' });
       setNotes(prev => prev.filter(n => n.id !== id));
       if (selectedNoteRef.current?.id === id) {
         setSelectedNote(null);
@@ -166,6 +174,24 @@ const Dashboard: React.FC = () => {
       }
     } catch (err) {
       console.error('Delete note error:', err);
+    }
+  }, [API_URL, currentView]);
+
+  const restoreNote = useCallback(async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await fetch(`${API_URL}/api/notes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_trash: false }),
+      });
+      setNotes(prev => prev.filter(n => n.id !== id));
+      if (selectedNoteRef.current?.id === id) {
+        setSelectedNote(null);
+        setIsPreview(false);
+      }
+    } catch (err) {
+      console.error('Restore note error:', err);
     }
   }, [API_URL]);
 
@@ -261,14 +287,13 @@ const Dashboard: React.FC = () => {
       {(showListOnMobile || !isMobile) && (
         <aside className="sidebar">
           <div className="sidebar-header">
-            <h2>Notes</h2>
+            <h2>{currentView === 'notes' ? 'Notes' : 'Trash'}</h2>
             <div className="header-actions">
-              <button className="icon-btn" onClick={() => navigate('/settings')} title="Settings">
-                <Settings size={18} />
-              </button>
-              <button className="new-note-btn circle" onClick={createNote}>
-                <Plus size={20} />
-              </button>
+              {currentView === 'notes' && (
+                <button className="new-note-btn circle" onClick={createNote}>
+                  <Plus size={20} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -303,14 +328,37 @@ const Dashboard: React.FC = () => {
               ))
             ) : (
                 <div className="empty-notes-list">
-                  <PenTool size={40} className="empty-icon" />
-                  <p>No notes found</p>
-                  <button onClick={createNote} className="create-first-btn">Create your first note</button>
+                  {currentView === 'notes' ? (
+                    <>
+                      <PenTool size={40} className="empty-icon" />
+                      <p>No notes found</p>
+                      <button onClick={createNote} className="create-first-btn">Create your first note</button>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={40} className="empty-icon" />
+                      <p>Trash is empty</p>
+                    </>
+                  )}
                 </div>
             )}
           </div>
 
           <div className="sidebar-footer">
+            <div 
+              className={`footer-item ${currentView === 'notes' ? 'active' : ''}`} 
+              onClick={() => { setCurrentView('notes'); setSelectedNote(null); }}
+            >
+              <PenTool size={18} />
+              <span>All Notes</span>
+            </div>
+            <div 
+              className={`footer-item ${currentView === 'trash' ? 'active' : ''}`} 
+              onClick={() => { setCurrentView('trash'); setSelectedNote(null); }}
+            >
+              <Trash2 size={18} />
+              <span>Trash</span>
+            </div>
             <div className="footer-item" onClick={() => navigate('/settings')}>
               <Settings size={18} />
               <span>Settings</span>
@@ -332,25 +380,53 @@ const Dashboard: React.FC = () => {
                 )}
                 
                 <div className="editor-actions">
-                  <button 
-                    className={`preview-toggle-btn ${isPreview ? 'active' : ''}`}
-                    onClick={() => setIsPreview(!isPreview)}
-                    title="Toggle Preview (Ctrl+Shift+P)"
-                  >
-                    <PenTool size={18} />
-                    <span>{isPreview ? 'Edit' : 'Preview'}</span>
-                  </button>
-                  <button 
-                    className="delete-btn" 
-                    onClick={(e) => deleteNote(selectedNote.id, e)}
-                    title="Delete Note (Ctrl+D)"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                  <div className="save-indicator" title="Save Status (Ctrl+S for manual save)">
-                    {saveStatus === 'saving' && <Clock size={14} className="saving" />}
-                    {saveStatus === 'saved' && <CheckCircle size={14} />}
-                  </div>
+                  {currentView === 'notes' ? (
+                    <>
+                      <button 
+                        className={`preview-toggle-btn ${isPreview ? 'active' : ''}`}
+                        onClick={() => setIsPreview(!isPreview)}
+                        title="Toggle Preview (Ctrl+Shift+P)"
+                      >
+                        <PenTool size={18} />
+                        <span>{isPreview ? 'Edit' : 'Preview'}</span>
+                      </button>
+                      <button 
+                        className="delete-btn" 
+                        onClick={(e) => deleteNote(selectedNote.id, e)}
+                        title="Move to Trash (Ctrl+D)"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        className="restore-btn" 
+                        onClick={(e) => restoreNote(selectedNote.id, e)}
+                        title="Restore Note"
+                      >
+                        <RotateCcw size={18} />
+                        <span>Restore</span>
+                      </button>
+                      <button 
+                        className="delete-btn permanent" 
+                        onClick={(e) => {
+                          if (window.confirm('Permanently delete this note? This action cannot be undone.')) {
+                            deleteNote(selectedNote.id, e);
+                          }
+                        }}
+                        title="Delete Permanently"
+                      >
+                        <Trash size={20} />
+                      </button>
+                    </>
+                  )}
+                  {currentView === 'notes' && (
+                    <div className="save-indicator" title="Save Status (Ctrl+S for manual save)">
+                      {saveStatus === 'saving' && <Clock size={14} className="saving" />}
+                      {saveStatus === 'saved' && <CheckCircle size={14} />}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -359,7 +435,7 @@ const Dashboard: React.FC = () => {
                 value={selectedNote.title}
                 onChange={(e) => handleEditorChange('title', e.target.value)}
                 placeholder="Title"
-                disabled={isPreview}
+                disabled={isPreview || currentView === 'trash'}
               />
               {isPreview ? (
                 <div className="markdown-preview fade-in">
@@ -371,6 +447,7 @@ const Dashboard: React.FC = () => {
                   value={selectedNote.content}
                   onChange={(e) => handleEditorChange('content', e.target.value)}
                   placeholder="Start writing..."
+                  disabled={currentView === 'trash'}
                 />
               )}
             </div>
