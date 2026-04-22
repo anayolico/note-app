@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LandingPage from './components/LandingPage';
-import Dashboard from './components/Dashboard';
-import Settings from './components/Settings';
+import LoadingOverlay from './components/LoadingOverlay';
 import './App.css';
+
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Settings = lazy(() => import('./components/Settings'));
 
 function App() {
   useEffect(() => {
@@ -40,11 +42,13 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <Suspense fallback={<LoadingOverlay />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
       </div>
     </Router>
   );
