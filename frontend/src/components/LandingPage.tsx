@@ -2,6 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import { supabase } from '../lib/supabase';
+import { 
+  Sparkles, 
+  Zap, 
+  Shield, 
+  MousePointer2, 
+  GitBranch, 
+  Award 
+} from 'lucide-react';
 import './LandingPage.css';
 
 const LandingPage: React.FC = () => {
@@ -93,16 +101,47 @@ const LandingPage: React.FC = () => {
         <p className="promo-text">Free forever for personal use.</p>
       </main>
 
-      <footer className="footer">
-        <div className="footer-top">
-          <p>© {new Date().getFullYear()} Mindful Canvas. Designed for the Ethereal Atelier.</p>
+      <section className="features-section">
+        <div className="feature-card">
+          <div className="feature-icon"><Sparkles size={32} color="#f59e0b" /></div>
+          <h3>Pure Focus</h3>
+          <p>A minimalist interface that fades into the background so your thoughts can take center stage.</p>
         </div>
-        {/* <div className="footer-links">
-          <a href="#privacy">Privacy</a>
-          <a href="#terms">Terms</a>
-          <a href="#studio">Studio</a>
-        </div> */}
-      </footer>
+        <div className="feature-card">
+          <div className="feature-icon"><Zap size={32} color="#5951e5" /></div>
+          <h3>Instant Sync</h3>
+          <p>Your notes are automatically synced across all your devices, always ready when inspiration strikes.</p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon"><Shield size={32} color="#10b981" /></div>
+          <h3>Secure & Private</h3>
+          <p>Built with privacy first. Your data is encrypted and secure, giving you total peace of mind.</p>
+        </div>
+      </section>
+
+      <section className="how-it-works">
+        <h2 className="section-title">Elevate your note-taking</h2>
+        <div className="steps-container">
+          <div className="step">
+            <div className="step-icon-wrapper"><MousePointer2 size={24} /></div>
+            <span className="step-number">01</span>
+            <h4>Capture</h4>
+            <p>Jot down ideas as they come. No formatting hurdles, just pure expression.</p>
+          </div>
+          <div className="step">
+            <div className="step-icon-wrapper"><GitBranch size={24} /></div>
+            <span className="step-number">02</span>
+            <h4>Organize</h4>
+            <p>Easily categorize and find your notes with our intuitive tagging system.</p>
+          </div>
+          <div className="step">
+            <div className="step-icon-wrapper"><Award size={24} /></div>
+            <span className="step-number">03</span>
+            <h4>Refine</h4>
+            <p>Revisit and polish your thoughts in a beautiful, calm environment.</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
