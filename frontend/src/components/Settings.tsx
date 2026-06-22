@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import './Settings.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
@@ -54,8 +56,38 @@ const Settings: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', listener);
   }, [theme]);
 
+  const clearBrowserAuthStorage = () => {
+    [localStorage, sessionStorage].forEach((storage) => {
+      Object.keys(storage).forEach((key) => {
+        const isSupabaseAuthKey =
+          key === 'supabase.auth.token' ||
+          (key.startsWith('sb-') && key.endsWith('-auth-token'));
+
+        if (isSupabaseAuthKey) {
+          storage.removeItem(key);
+        }
+      });
+    });
+
+    document.cookie.split(';').forEach((cookie) => {
+      const name = cookie.split('=')[0].trim();
+      if (!name) return;
+      document.cookie = `${name}=; Max-Age=0; path=/`;
+    });
+  };
+
   const handleSignOut = async () => {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout endpoint error:', err);
+    }
+
     await supabase.auth.signOut();
+    clearBrowserAuthStorage();
     navigate('/');
   };
 

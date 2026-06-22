@@ -6,8 +6,13 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || true,
+  credentials: true,
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Neon Database Connection
@@ -50,6 +55,34 @@ initDb();
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Mindful Canvas API is running' });
+});
+
+// Logout Endpoint
+app.post('/api/auth/logout', (req, res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+  };
+
+  [
+    'access_token',
+    'refresh_token',
+    'auth_token',
+    'token',
+    'session',
+    'sb-access-token',
+    'sb-refresh-token',
+  ].forEach((cookieName) => {
+    res.clearCookie(cookieName, cookieOptions);
+  });
+
+  res.json({
+    message: 'Logged out successfully',
+    clearStoragePrefixes: ['sb-'],
+    clearStorageKeys: ['supabase.auth.token'],
+  });
 });
 
 // User Sync Endpoint
