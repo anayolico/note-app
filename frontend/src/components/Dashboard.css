@@ -25,6 +25,10 @@
   align-items: center;
 }
 
+.sidebar-header h2 {
+  color: var(--text-primary);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
