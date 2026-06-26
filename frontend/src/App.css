@@ -73,3 +73,89 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+/* Ad Toast Styles */
+.ad-toast-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+  max-width: 320px;
+}
+
+.ad-toast-container:hover {
+  background: var(--card-hover);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.ad-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-toast-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.ad-toast-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-toast-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.ad-toast-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ad-toast-close {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: 1.5rem;
+  padding: 0 4px;
+  margin-left: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.ad-toast-close:hover {
+  color: var(--text-primary);
+}
+
+.animate-enter {
+  animation: enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.animate-leave {
+  animation: leave 0.3s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
+}
+
+@keyframes enter {
+  0% { transform: translate3d(0, 200%, 0) scale(0.6); opacity: 0; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+}
+
+@keyframes leave {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  100% { transform: translate3d(0, 200%, 0) scale(0.6); opacity: 0; }
+}

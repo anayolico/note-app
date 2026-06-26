@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import LoadingOverlay from './components/LoadingOverlay';
+import AdToast from './components/AdToast';
 import './App.css';
 
 const LandingPage = lazy(() => import('./components/LandingPage'));
@@ -53,6 +54,7 @@ function App() {
             }
           }}
         />
+        <AdToast />
         <Suspense fallback={<LoadingOverlay />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
