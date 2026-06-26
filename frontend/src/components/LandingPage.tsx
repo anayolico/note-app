@@ -1,7 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
+import SEO from './SEO';
+import anayoLogo from '../assets/anayolico.png.png';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 import { 
   Sparkles, 
   Zap, 
@@ -55,13 +58,20 @@ const LandingPage: React.FC = () => {
     if (error) {
       setLoggingIn(false);
       console.error('Error logging in with Google:', error.message);
-      alert('Login failed. Please try again or check your Supabase configuration.');
+      toast.error('Login failed. Please try again or check your configuration.');
     }
   };
 
   return (
-    <div className="landing-container">
-      <Header onLogin={handleGoogleLogin} />
+    <>
+      <SEO 
+        title="Mindful Canvas | Note App" 
+        description="Escape the noise. Mindful Canvas provides a serene, distraction-free environment designed to give your ideas the breathing room they deserve." 
+        keywords="note app, mindful canvas, Anayolico, Caleb Anayolico, distraction-free, minimalist notes"
+        url="/"
+      />
+      <div className="landing-container">
+        <Header onLogin={handleGoogleLogin} />
       <main className="hero-section">
         <div className="badge">
           <span className="dot"></span>
@@ -142,7 +152,16 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Footer Branding */}
+      <footer style={{ textAlign: 'center', padding: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '4rem' }}>
+        <a href="https://anayolico.name.ng" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#888', textDecoration: 'none', fontSize: '14px', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'} onMouseOut={(e) => e.currentTarget.style.opacity = '1'}>
+          <span>Built by Caleb Anayolico</span>
+          <img src={anayoLogo} alt="Anayolico Logo" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+        </a>
+      </footer>
     </div>
+    </>
   );
 };
 

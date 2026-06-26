@@ -16,6 +16,8 @@ import {
 import './Dashboard.css';
 import LoadingOverlay from './LoadingOverlay';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'react-hot-toast';
+import SEO from './SEO';
 import { useRef } from 'react';
 
 interface Note {
@@ -172,10 +174,37 @@ const Dashboard: React.FC = () => {
         setSelectedNote(null);
         setIsPreview(false);
       }
+      toast.success(isPermanent ? 'Note permanently deleted' : 'Note moved to trash');
     } catch (err) {
       console.error('Delete note error:', err);
+      toast.error('Failed to delete note');
     }
   }, [API_URL, currentView]);
+
+  const confirmDeleteAction = (message: string, action: () => void) => {
+    toast((t) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <span style={{ fontWeight: 500 }}>{message}</span>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button 
+            style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-primary)' }}
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancel
+          </button>
+          <button 
+            style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+            onClick={() => {
+              action();
+              toast.dismiss(t.id);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ), { duration: 5000 });
+  };
 
   const restoreNote = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -220,7 +249,10 @@ const Dashboard: React.FC = () => {
       else if (isMod && e.key.toLowerCase() === 'd') {
         if (currentSelectedNote) {
           e.preventDefault();
-          if (window.confirm('Are you sure you want to delete this note?')) {
+          if (currentView === 'trash') {
+            confirmDeleteAction('Permanently delete this note? This action cannot be undone.', () => deleteNote(currentSelectedNote.id));
+          } else {
+            // Soft delete doesn't need strict confirm, just do it
             deleteNote(currentSelectedNote.id);
           }
         }
@@ -281,7 +313,14 @@ const Dashboard: React.FC = () => {
   const showEditorOnMobile = isMobile && selectedNote;
 
   return (
-    <div className={`dashboard-layout ${isMobile ? 'mobile' : ''}`}>
+    <>
+      <SEO 
+        title="Dashboard | Mindful Canvas" 
+        description="Your serene, distraction-free environment to organize your notes." 
+        keywords="note app, mindful canvas, Anayolico, Caleb Anayolico, dashboard, notes"
+        url="/dashboard"
+      />
+      <div className={`dashboard-layout ${isMobile ? 'mobile' : ''}`}>
       
       {/* Sidebar / List View */}
       {(showListOnMobile || !isMobile) && (
@@ -324,6 +363,39 @@ const Dashboard: React.FC = () => {
                     <span className="note-item-time">{new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <p className="note-item-preview">{note.content || 'No additional text'}</p>
+                  
+                  {/* Inline Action Buttons */}
+                  <div className="note-item-actions">
+                    {currentView === 'notes' ? (
+                      <button 
+                        className="inline-action-btn delete"
+                        onClick={(e) => deleteNote(note.id, e)}
+                        title="Move to Trash"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    ) : (
+                      <>
+                        <button 
+                          className="inline-action-btn restore"
+                          onClick={(e) => restoreNote(note.id, e)}
+                          title="Restore Note"
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                        <button 
+                          className="inline-action-btn delete permanent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDeleteAction('Permanently delete this note? This action cannot be undone.', () => deleteNote(note.id, e));
+                          }}
+                          title="Delete Permanently"
+                        >
+                          <Trash size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (
@@ -411,9 +483,7 @@ const Dashboard: React.FC = () => {
                       <button 
                         className="delete-btn permanent" 
                         onClick={(e) => {
-                          if (window.confirm('Permanently delete this note? This action cannot be undone.')) {
-                            deleteNote(selectedNote.id, e);
-                          }
+                          confirmDeleteAction('Permanently delete this note? This action cannot be undone.', () => deleteNote(selectedNote.id, e));
                         }}
                         title="Delete Permanently"
                       >
@@ -461,6 +531,7 @@ const Dashboard: React.FC = () => {
         </main>
       )}
     </div>
+    </>
   );
 };
 

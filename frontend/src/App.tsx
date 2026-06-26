@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import LoadingOverlay from './components/LoadingOverlay';
 import './App.css';
 
@@ -42,6 +43,16 @@ function App() {
   return (
     <Router>
       <div className="App">
+        <Toaster 
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)'
+            }
+          }}
+        />
         <Suspense fallback={<LoadingOverlay />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />

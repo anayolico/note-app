@@ -87,6 +87,52 @@
 .note-item-time { font-size: 0.75rem; color: var(--text-secondary); }
 .note-item-preview { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* Action Buttons */
+.note-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.note-item:hover .note-item-actions {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .note-item-actions { opacity: 1; }
+}
+
+.inline-action-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-action-btn:hover {
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+}
+
+.inline-action-btn.delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.inline-action-btn.delete.permanent:hover {
+  background: #ef4444;
+  color: white;
+}
+
 .empty-notes-list {
   display: flex;
   flex-direction: column;
