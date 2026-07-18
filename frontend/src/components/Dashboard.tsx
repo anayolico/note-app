@@ -34,13 +34,15 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [currentView, setCurrentView] = useState<'notes' | 'trash'>('notes');
+  const [activeNotes, setActiveNotes] = useState<Note[] | null>(null);
+  const [trashNotes, setTrashNotes] = useState<Note[] | null>(null);
+  const notes = (currentView === 'notes' ? activeNotes : trashNotes) || [];
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isPreview, setIsPreview] = useState(false);
-  const [currentView, setCurrentView] = useState<'notes' | 'trash'>('notes');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedNoteRef = useRef<Note | null>(null);
 
@@ -69,12 +71,6 @@ const Dashboard: React.FC = () => {
         setUser(session.user);
         
         try {
-          // Fetch data based on current view
-          const endpoint = currentView === 'trash' ? '/api/notes/trash' : '/api/notes';
-          const res = await fetch(`${API_URL}${endpoint}?userId=${session.user.id}`);
-          const data = await res.json();
-          if (mounted) setNotes(data || []);
-          
           // Sync user
           fetch(`${API_URL}/api/users/sync`, {
             method: 'POST',
@@ -87,9 +83,7 @@ const Dashboard: React.FC = () => {
             }),
           }).catch(e => console.error('Sync failed:', e));
         } catch (err) {
-          console.error('Data fetch error:', err);
-        } finally {
-          if (mounted) setLoading(false);
+          console.error('Sync error:', err);
         }
       } 
       
@@ -126,7 +120,59 @@ const Dashboard: React.FC = () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, currentView]);
+  }, [navigate]);
+
+  // Reset cache if user ID changes
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (user?.id !== prevUserIdRef.current) {
+      setActiveNotes(null);
+      setTrashNotes(null);
+      prevUserIdRef.current = user?.id || null;
+    }
+  }, [user]);
+
+  // Load data and cache it
+  useEffect(() => {
+    if (!user) return;
+
+    let mounted = true;
+
+    const loadData = async () => {
+      if (currentView === 'notes' && activeNotes === null) {
+        setLoading(true);
+        try {
+          const res = await fetch(`${API_URL}/api/notes?userId=${user.id}`);
+          const data = await res.json();
+          if (mounted) setActiveNotes(data || []);
+        } catch (err) {
+          console.error('Fetch notes error:', err);
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      } else if (currentView === 'trash' && trashNotes === null) {
+        setLoading(true);
+        try {
+          const res = await fetch(`${API_URL}/api/notes/trash?userId=${user.id}`);
+          const data = await res.json();
+          if (mounted) setTrashNotes(data || []);
+        } catch (err) {
+          console.error('Fetch trash notes error:', err);
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      } else {
+        // If already cached, ensure loading is false
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user, currentView, activeNotes, trashNotes]);
 
   const createNote = useCallback(async () => {
     if (!user) return;
@@ -137,7 +183,7 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify({ userId: user.id }),
       });
       const newNote = await res.json();
-      setNotes(prev => [newNote, ...prev]);
+      setActiveNotes(prev => prev ? [newNote, ...prev] : [newNote]);
       setSelectedNote(newNote);
       setIsPreview(false);
     } catch (err) {
@@ -156,7 +202,7 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify({ title: note.title, content: note.content }),
       });
       setSaveStatus('saved');
-      setNotes(prev => prev.map(n => n.id === note.id ? { ...n, title: note.title, content: note.content, updated_at: new Date().toISOString() } : n));
+      setActiveNotes(prev => prev ? prev.map(n => n.id === note.id ? { ...n, title: note.title, content: note.content, updated_at: new Date().toISOString() } : n) : null);
     } catch (err) {
       console.error('Manual save error:', err);
     }
@@ -169,7 +215,21 @@ const Dashboard: React.FC = () => {
       const endpoint = isPermanent ? `/api/notes/${id}/permanent` : `/api/notes/${id}`;
       
       await fetch(`${API_URL}${endpoint}`, { method: 'DELETE' });
-      setNotes(prev => prev.filter(n => n.id !== id));
+      
+      if (isPermanent) {
+        setTrashNotes(prev => prev ? prev.filter(n => n.id !== id) : null);
+      } else {
+        setActiveNotes(prevActive => {
+          if (!prevActive) return null;
+          const noteToTrash = prevActive.find(n => n.id === id);
+          if (noteToTrash) {
+            const updatedNote = { ...noteToTrash, is_trash: true, updated_at: new Date().toISOString() };
+            setTrashNotes(prevTrash => prevTrash ? [updatedNote, ...prevTrash] : null);
+          }
+          return prevActive.filter(n => n.id !== id);
+        });
+      }
+      
       if (selectedNoteRef.current?.id === id) {
         setSelectedNote(null);
         setIsPreview(false);
@@ -214,7 +274,17 @@ const Dashboard: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_trash: false }),
       });
-      setNotes(prev => prev.filter(n => n.id !== id));
+      
+      setTrashNotes(prevTrash => {
+        if (!prevTrash) return null;
+        const noteToRestore = prevTrash.find(n => n.id === id);
+        if (noteToRestore) {
+          const restoredNote = { ...noteToRestore, is_trash: false, updated_at: new Date().toISOString() };
+          setActiveNotes(prevActive => prevActive ? [restoredNote, ...prevActive] : null);
+        }
+        return prevTrash.filter(n => n.id !== id);
+      });
+
       if (selectedNoteRef.current?.id === id) {
         setSelectedNote(null);
         setIsPreview(false);
@@ -281,7 +351,7 @@ const Dashboard: React.FC = () => {
             body: JSON.stringify({ title, content }),
           });
           setSaveStatus('saved');
-          setNotes(prev => prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n));
+          setActiveNotes(prev => prev ? prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n) : null);
         } catch (err) {
           console.error('Auto-save error:', err);
         }
