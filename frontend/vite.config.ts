@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     Sitemap({
-      hostname: 'https://coinmarketscap.online',
+      hostname: 'https://mindful-canvas.vercel.app',
       dynamicRoutes: [
         '/',
         '/dashboard'
