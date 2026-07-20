@@ -35,7 +35,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .get-started-btn {
@@ -82,7 +82,7 @@
   font-size: 3.5rem;
   line-height: 1.1;
   margin-bottom: 1.5rem;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   color: var(--text-primary);
 }
 
@@ -148,7 +148,7 @@
   background: var(--card-bg);
   border: 1px solid var(--border);
   padding: 2rem;
-  border-radius: 24px;
+  border-radius: 8px;
   text-align: left;
   transition: all 0.3s ease;
 }
@@ -186,7 +186,7 @@
 .section-title {
   font-size: 2.5rem;
   margin-bottom: 4rem;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   background: var(--text-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

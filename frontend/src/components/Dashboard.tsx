@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
@@ -32,7 +33,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'notes' | 'trash'>('notes');
   const [activeNotes, setActiveNotes] = useState<Note[] | null>(null);
@@ -189,7 +190,7 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       console.error('Create note error:', err);
     }
-  }, [user, API_URL]);
+  }, [user]);
 
   const saveSelectedNote = useCallback(async () => {
     const note = selectedNoteRef.current;
@@ -206,7 +207,7 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       console.error('Manual save error:', err);
     }
-  }, [API_URL]);
+  }, []);
 
   const deleteNote = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -239,7 +240,7 @@ const Dashboard: React.FC = () => {
       console.error('Delete note error:', err);
       toast.error('Failed to delete note');
     }
-  }, [API_URL, currentView]);
+  }, [currentView]);
 
   const confirmDeleteAction = (message: string, action: () => void) => {
     toast((t) => (
@@ -292,7 +293,7 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       console.error('Restore note error:', err);
     }
-  }, [API_URL]);
+  }, []);
 
   // Keyboard Shortcuts Listener
   useEffect(() => {
@@ -338,7 +339,7 @@ const Dashboard: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createNote, deleteNote, saveSelectedNote]); // Removed selectedNote from dependencies
+  }, [createNote, currentView, deleteNote, saveSelectedNote]); // Removed selectedNote from dependencies
 
   const debounceSave = useCallback(
     (noteId: string, title: string, content: string) => {
@@ -389,6 +390,7 @@ const Dashboard: React.FC = () => {
         description="Your serene, distraction-free environment to organize your notes." 
         keywords="note app, mindful canvas, Anayolico, Caleb Anayolico, dashboard, notes"
         url="/dashboard"
+        noIndex
       />
       <div className={`dashboard-layout ${isMobile ? 'mobile' : ''}`}>
       

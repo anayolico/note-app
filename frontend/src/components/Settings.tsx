@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
@@ -15,7 +16,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<SupabaseUser | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
     (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
   );
@@ -144,23 +145,23 @@ const Settings: React.FC = () => {
         <section className="settings-card shortcuts-card">
            <div className="shortcut-item">
              <span>New note</span>
-             <div className="key-combo">⌘ N</div>
+             <div className="key-combo">Ctrl + N</div>
            </div>
            <div className="shortcut-item">
              <span>Save</span>
-             <div className="key-combo">⌘ S</div>
+             <div className="key-combo">Ctrl + S</div>
            </div>
            <div className="shortcut-item">
              <span>Search</span>
-             <div className="key-combo">⌘ K</div>
+             <div className="key-combo">Ctrl + K</div>
            </div>
            <div className="shortcut-item">
              <span>Delete</span>
-             <div className="key-combo">⌘ D</div>
+             <div className="key-combo">Ctrl + D</div>
            </div>
            <div className="shortcut-item">
              <span>Toggle preview</span>
-             <div className="key-combo">⌘ ⇧ P</div>
+             <div className="key-combo">Ctrl + Shift + P</div>
            </div>
         </section>
 
