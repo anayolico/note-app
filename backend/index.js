@@ -53,8 +53,48 @@ const initDb = async () => {
 initDb();
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Mindful Canvas API is running' });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Verify database connection
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'ok', 
+      message: 'Mindful Canvas API is running',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Health check database query failed:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'API is running but database connection failed',
+      database: 'disconnected',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    // Verify database connection
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'ok', 
+      message: 'Mindful Canvas API is running',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Health check database query failed:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'API is running but database connection failed',
+      database: 'disconnected',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Logout Endpoint
