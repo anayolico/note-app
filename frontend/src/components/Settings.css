@@ -159,6 +159,62 @@
   .theme-card span { font-size: 0.75rem; }
 }
 
+/* Install App Card */
+.install-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+.install-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.install-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary, #5951e5);
+}
+
+.install-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.install-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.install-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--primary, #5951e5);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.install-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
 /* Danger Zone */
 .danger-label {
   color: #ef4444;

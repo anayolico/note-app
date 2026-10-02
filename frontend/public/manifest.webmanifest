@@ -1,20 +1,45 @@
 {
-  "name": "Mindful Canvas",
-  "short_name": "Canvas",
-  "description": "A calm, distraction-free note app for capturing and organizing your thoughts.",
+  "id": "/",
+  "name": "Mindful Canvas - Notes",
+  "short_name": "Mindful",
+  "description": "A calm, distraction-free note taking app designed to give your ideas the breathing room they deserve.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#09090b",
   "theme_color": "#5951e5",
-  "categories": ["productivity", "utilities"],
+  "categories": ["productivity", "utilities", "lifestyle"],
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     }
   ]
 }
+

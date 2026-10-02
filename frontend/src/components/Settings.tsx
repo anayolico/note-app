@@ -9,7 +9,9 @@ import {
   Sun, 
   Moon, 
   Monitor,
-  AlertOctagon
+  AlertOctagon,
+  Download,
+  Smartphone
 } from 'lucide-react';
 import './Settings.css';
 import CloseAccountModal from './CloseAccountModal';
@@ -22,9 +24,34 @@ const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<SupabaseUser | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(
+    window.matchMedia('(display-mode: standalone)').matches
+  );
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
     (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
   );
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      toast.success('Mindful Canvas installed successfully!');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -122,6 +149,22 @@ const Settings: React.FC = () => {
     supabase.auth.signOut().catch((err) => console.error('Supabase signOut error in background:', err));
   };
 
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      toast('To install, open your browser menu and tap "Install App" or "Add to Home Screen".', {
+        icon: '📱',
+        duration: 5000,
+      });
+    }
+  };
+
   return (
     <div className="settings-page fade-in">
       <header className="settings-header">
@@ -142,6 +185,34 @@ const Settings: React.FC = () => {
             <span className="email-text">{profile?.email || 'user@example.com'}</span>
             <span className="provider-text">Google</span>
           </div>
+        </section>
+
+        {/* Install App Section */}
+        <div className="section-label">APP INSTALLATION</div>
+        <section className="settings-card install-card">
+          <div className="install-card-info">
+            <div className="install-title-row">
+              <Smartphone size={18} className="install-icon" />
+              <span className="install-title">
+                {isInstalled ? 'App Installed' : 'Install Mindful Canvas'}
+              </span>
+            </div>
+            <p className="install-description">
+              {isInstalled
+                ? 'Mindful Canvas is installed and ready for fast offline access on this device.'
+                : 'Install as a standalone app on your desktop, iPhone, or Android phone for instant access.'}
+            </p>
+          </div>
+          {!isInstalled && (
+            <button 
+              type="button" 
+              className="install-btn" 
+              onClick={handleInstallClick}
+            >
+              <Download size={16} />
+              <span>Install App</span>
+            </button>
+          )}
         </section>
 
         {/* Appearance Section */}
