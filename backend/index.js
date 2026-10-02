@@ -15,6 +15,21 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Terminal Request Logging Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const timestamp = new Date().toLocaleTimeString();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const icon = status >= 500 ? '❌' : status >= 400 ? '⚠️' : '✅';
+    console.log(`[${timestamp}] ${icon} ${req.method} ${req.originalUrl || req.url} -> ${status} (${duration}ms)`);
+  });
+
+  next();
+});
+
 // Database Connection (Supabase PostgreSQL / Connection Pooler)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -319,10 +334,11 @@ app.delete('/api/notes/:id/permanent', async (req, res) => {
   }
 });
 
-// Basic error handling
+// Error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+  console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err.message || err);
+  if (err.stack) console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
 app.listen(port, () => {
