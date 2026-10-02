@@ -20,6 +20,7 @@ import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
 import SEO from './SEO';
 import { useRef } from 'react';
+import { getCachedData, setCachedData, clearUserCache } from '../lib/cache';
 
 interface Note {
   id: string;
@@ -127,13 +128,14 @@ const Dashboard: React.FC = () => {
   const prevUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (user?.id !== prevUserIdRef.current) {
+      if (prevUserIdRef.current) clearUserCache(prevUserIdRef.current);
       setActiveNotes(null);
       setTrashNotes(null);
       prevUserIdRef.current = user?.id || null;
     }
   }, [user]);
 
-  // Load data and cache it
+  // Load data with stale-while-revalidate cache
   useEffect(() => {
     if (!user) return;
 
@@ -141,29 +143,50 @@ const Dashboard: React.FC = () => {
 
     const loadData = async () => {
       if (currentView === 'notes' && activeNotes === null) {
-        setLoading(true);
+        // 1. Serve stale data from cache instantly (no loading screen)
+        const cached = getCachedData<Note[]>(`notes_${user.id}`);
+        if (cached) {
+          if (mounted) { setActiveNotes(cached); setLoading(false); }
+        } else {
+          if (mounted) setLoading(true);
+        }
+
+        // 2. Always revalidate in background
         try {
           const res = await fetch(`${API_URL}/api/notes?userId=${user.id}`);
           const data = await res.json();
-          if (mounted) setActiveNotes(data || []);
+          if (mounted) {
+            setActiveNotes(data || []);
+            setCachedData(`notes_${user.id}`, data || []);
+          }
         } catch (err) {
           console.error('Fetch notes error:', err);
         } finally {
           if (mounted) setLoading(false);
         }
       } else if (currentView === 'trash' && trashNotes === null) {
-        setLoading(true);
+        // 1. Serve stale data from cache instantly
+        const cached = getCachedData<Note[]>(`trash_${user.id}`);
+        if (cached) {
+          if (mounted) { setTrashNotes(cached); setLoading(false); }
+        } else {
+          if (mounted) setLoading(true);
+        }
+
+        // 2. Revalidate in background
         try {
           const res = await fetch(`${API_URL}/api/notes/trash?userId=${user.id}`);
           const data = await res.json();
-          if (mounted) setTrashNotes(data || []);
+          if (mounted) {
+            setTrashNotes(data || []);
+            setCachedData(`trash_${user.id}`, data || []);
+          }
         } catch (err) {
           console.error('Fetch trash notes error:', err);
         } finally {
           if (mounted) setLoading(false);
         }
       } else {
-        // If already cached, ensure loading is false
         setLoading(false);
       }
     };
@@ -184,7 +207,11 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify({ userId: user.id }),
       });
       const newNote = await res.json();
-      setActiveNotes(prev => prev ? [newNote, ...prev] : [newNote]);
+      setActiveNotes(prev => {
+        const updated = prev ? [newNote, ...prev] : [newNote];
+        setCachedData(`notes_${user.id}`, updated);
+        return updated;
+      });
       setSelectedNote(newNote);
       setIsPreview(false);
     } catch (err) {
