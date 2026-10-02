@@ -6,17 +6,22 @@ import {
   ChevronLeft, 
   LogOut, 
   User, 
-  Sun,
-  Moon,
-  Monitor
+  Sun, 
+  Moon, 
+  Monitor,
+  AlertOctagon
 } from 'lucide-react';
 import './Settings.css';
+import CloseAccountModal from './CloseAccountModal';
+import { clearUserCache } from '../lib/cache';
+import { toast } from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<SupabaseUser | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
     (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
   );
@@ -77,19 +82,44 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleSignOut = async () => {
-    try {
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (err) {
-      console.error('Logout endpoint error:', err);
-    }
-
-    await supabase.auth.signOut();
-    clearBrowserAuthStorage();
+  const handleSignOut = () => {
+    // 1. Immediately navigate away without waiting for backend
     navigate('/');
+
+    // 2. Clear client storage & user cache
+    if (profile?.id) {
+      clearUserCache(profile.id);
+    }
+    clearBrowserAuthStorage();
+
+    // 3. Fire-and-forget background server & supabase logout
+    fetch(`${API_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch((err) => console.error('Logout endpoint error in background:', err));
+
+    supabase.auth.signOut().catch((err) => console.error('Supabase signOut error in background:', err));
+  };
+
+  const handleCloseAccount = () => {
+    if (!profile) return;
+    const userId = profile.id;
+
+    // 1. Immediately navigate away to landing page
+    navigate('/');
+    toast.success('Your account has been closed.', { duration: 4000 });
+
+    // 2. Clear client storage & user cache
+    clearUserCache(userId);
+    clearBrowserAuthStorage();
+
+    // 3. Fire-and-forget backend wipe of all data in background
+    fetch(`${API_URL}/api/users/${userId}`, {
+      method: 'DELETE',
+    }).catch((err) => console.error('Close account backend error:', err));
+
+    // 4. Background sign out
+    supabase.auth.signOut().catch((err) => console.error('Supabase signOut error in background:', err));
   };
 
   return (
@@ -165,14 +195,44 @@ const Settings: React.FC = () => {
            </div>
         </section>
 
+        {/* Danger Zone */}
+        <div className="section-label danger-label">DANGER ZONE</div>
+        <section className="settings-card danger-card">
+          <div className="danger-card-info">
+            <div className="danger-title-row">
+              <AlertOctagon size={18} className="danger-icon" />
+              <span className="danger-title">Close Account</span>
+            </div>
+            <p className="danger-description">
+              Permanently delete your account and all associated notes. This action cannot be reversed.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            className="danger-btn" 
+            onClick={() => setShowCloseModal(true)}
+          >
+            Close Account
+          </button>
+        </section>
+
         {/* Sign Out Button */}
         <button className="outlined-signout-btn" onClick={handleSignOut}>
           <LogOut size={18} />
           <span>Sign Out</span>
         </button>
       </main>
+
+      {/* Close Account 3-Step Modal */}
+      {showCloseModal && (
+        <CloseAccountModal 
+          onClose={() => setShowCloseModal(false)}
+          onConfirm={handleCloseAccount}
+        />
+      )}
     </div>
   );
 };
 
 export default Settings;
+

@@ -334,6 +334,30 @@ app.delete('/api/notes/:id/permanent', async (req, res) => {
   }
 });
 
+// DELETE /api/users/:userId — Close account (wipe all data)
+app.delete('/api/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // 1. Delete all notes (active + trash)
+    await client.query('DELETE FROM notes WHERE user_id = $1', [userId]);
+    // 2. Delete the user record
+    await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    await client.query('COMMIT');
+    console.log(`[ACCOUNT CLOSED] User ${userId} — all data wiped.`);
+    res.json({ success: true, message: 'Account and all data deleted.' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Close account error:', err);
+    res.status(500).json({ error: 'Failed to close account.' });
+  } finally {
+    client.release();
+  }
+});
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err.message || err);
