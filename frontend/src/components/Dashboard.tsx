@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
 
   const saveSelectedNote = useCallback(async () => {
     const note = selectedNoteRef.current;
-    if (!note) return;
+    if (!note || !user) return;
     setSaveStatus('saving');
     try {
       await fetch(`${API_URL}/api/notes/${note.id}`, {
@@ -232,16 +232,17 @@ const Dashboard: React.FC = () => {
       setSaveStatus('saved');
       setActiveNotes(prev => {
         const updated = prev ? prev.map(n => n.id === note.id ? { ...n, title: note.title, content: note.content, updated_at: new Date().toISOString() } : n) : null;
-        if (updated && note.id) setCachedData(`notes_${selectedNoteRef.current?.id ?? note.id}`, updated);
+        if (updated) setCachedData(`notes_${user.id}`, updated);
         return updated;
       });
     } catch (err) {
       console.error('Manual save error:', err);
     }
-  }, []);
+  }, [user]);
 
   const deleteNote = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (!user) return;
     try {
       const isPermanent = currentView === 'trash';
       const endpoint = isPermanent ? `/api/notes/${id}/permanent` : `/api/notes/${id}`;
@@ -250,19 +251,25 @@ const Dashboard: React.FC = () => {
       
       if (isPermanent) {
         setTrashNotes(prev => {
-          const updated = prev ? prev.filter(n => n.id !== id) : null;
+          const updated = prev ? prev.filter(n => n.id !== id) : [];
+          setCachedData(`trash_${user.id}`, updated);
           return updated;
         });
       } else {
         setActiveNotes(prevActive => {
-          if (!prevActive) return null;
+          if (!prevActive) return [];
           const noteToTrash = prevActive.find(n => n.id === id);
           if (noteToTrash) {
             const updatedNote = { ...noteToTrash, is_trash: true, updated_at: new Date().toISOString() };
-            setTrashNotes(prevTrash => prevTrash ? [updatedNote, ...prevTrash] : null);
+            setTrashNotes(prevTrash => {
+              const updatedTrash = prevTrash ? [updatedNote, ...prevTrash] : [updatedNote];
+              setCachedData(`trash_${user.id}`, updatedTrash);
+              return updatedTrash;
+            });
           }
-          const updated = prevActive.filter(n => n.id !== id);
-          return updated;
+          const updatedActive = prevActive.filter(n => n.id !== id);
+          setCachedData(`notes_${user.id}`, updatedActive);
+          return updatedActive;
         });
       }
       
@@ -270,14 +277,21 @@ const Dashboard: React.FC = () => {
         setSelectedNote(null);
         setIsPreview(false);
       }
+
+      const toastId = isPermanent ? 'permanent-delete-toast' : 'trash-delete-toast';
+      toast.remove(toastId);
       toast.success(isPermanent ? 'Note permanently deleted' : 'Note moved to trash', {
-        duration: 3000,
+        id: toastId,
+        duration: 2500,
       });
+      setTimeout(() => {
+        toast.dismiss(toastId);
+      }, 2500);
     } catch (err) {
       console.error('Delete note error:', err);
-      toast.error('Failed to delete note', { duration: 4000 });
+      toast.error('Failed to delete note', { duration: 3000 });
     }
-  }, [currentView]);
+  }, [currentView, user]);
 
   const confirmDeleteAction = (message: string, action: () => void) => {
     toast((t) => (
@@ -294,7 +308,7 @@ const Dashboard: React.FC = () => {
             style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
             onClick={() => {
               toast.remove(t.id);          // Remove instantly (no animation hang)
-              setTimeout(action, 100);     // Let React flush before showing next toast
+              setTimeout(action, 80);      // Let React flush before showing next toast
             }}
           >
             Delete
@@ -306,6 +320,7 @@ const Dashboard: React.FC = () => {
 
   const restoreNote = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (!user) return;
     try {
       await fetch(`${API_URL}/api/notes/${id}`, {
         method: 'PATCH',
@@ -314,28 +329,37 @@ const Dashboard: React.FC = () => {
       });
       
       setTrashNotes(prevTrash => {
-        if (!prevTrash) return null;
+        if (!prevTrash) return [];
         const noteToRestore = prevTrash.find(n => n.id === id);
         if (noteToRestore) {
           const restoredNote = { ...noteToRestore, is_trash: false, updated_at: new Date().toISOString() };
           setActiveNotes(prevActive => {
-            const updated = prevActive ? [restoredNote, ...prevActive] : [restoredNote];
-            return updated;
+            const updatedActive = prevActive ? [restoredNote, ...prevActive] : [restoredNote];
+            setCachedData(`notes_${user.id}`, updatedActive);
+            return updatedActive;
           });
         }
-        return prevTrash.filter(n => n.id !== id);
+        const updatedTrash = prevTrash.filter(n => n.id !== id);
+        setCachedData(`trash_${user.id}`, updatedTrash);
+        return updatedTrash;
       });
 
       if (selectedNoteRef.current?.id === id) {
         setSelectedNote(null);
         setIsPreview(false);
       }
-      toast.success('Note restored', { duration: 3000 });
+
+      const toastId = 'restore-note-toast';
+      toast.remove(toastId);
+      toast.success('Note restored', { id: toastId, duration: 2500 });
+      setTimeout(() => {
+        toast.dismiss(toastId);
+      }, 2500);
     } catch (err) {
       console.error('Restore note error:', err);
-      toast.error('Failed to restore note', { duration: 4000 });
+      toast.error('Failed to restore note', { duration: 3000 });
     }
-  }, []);
+  }, [user]);
 
   // Keyboard Shortcuts Listener
   useEffect(() => {
@@ -381,7 +405,7 @@ const Dashboard: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createNote, currentView, deleteNote, saveSelectedNote]); // Removed selectedNote from dependencies
+  }, [createNote, currentView, deleteNote, saveSelectedNote]);
 
   const debounceSave = useCallback(
     (noteId: string, title: string, content: string) => {
@@ -394,14 +418,18 @@ const Dashboard: React.FC = () => {
             body: JSON.stringify({ title, content }),
           });
           setSaveStatus('saved');
-          setActiveNotes(prev => prev ? prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n) : null);
+          setActiveNotes(prev => {
+            const updated = prev ? prev.map(n => n.id === noteId ? { ...n, title, content, updated_at: new Date().toISOString() } : n) : null;
+            if (updated && user?.id) setCachedData(`notes_${user.id}`, updated);
+            return updated;
+          });
         } catch (err) {
           console.error('Auto-save error:', err);
         }
       }, 1000);
       return () => clearTimeout(timer);
     },
-    []
+    [user]
   );
 
   const handleEditorChange = (field: 'title' | 'content', value: string) => {

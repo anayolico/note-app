@@ -46,20 +46,24 @@ function App() {
       <div className="App">
         <Toaster 
           position="bottom-right"
+          gutter={8}
+          containerStyle={{
+            zIndex: 99999,
+          }}
           toastOptions={{
-            duration: 3000,
+            duration: 2500,
             style: {
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary, #18181b)',
+              color: 'var(--text-primary, #ffffff)',
+              border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
               borderRadius: '8px',
               padding: '12px 16px',
             },
             success: {
-              duration: 3000,
+              duration: 2500,
             },
             error: {
-              duration: 4000,
+              duration: 3500,
             }
           }}
         />
