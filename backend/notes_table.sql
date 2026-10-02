@@ -1,4 +1,4 @@
--- Run this in your Neon SQL Editor to create the notes table
+-- Run this in your Supabase SQL Editor to create the notes table
 CREATE TABLE IF NOT EXISTS notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS notes (
 
 -- Index for faster lookup by user
 CREATE INDEX IF NOT EXISTS notes_user_id_idx ON notes (user_id);
+
 -- Index for search
 CREATE INDEX IF NOT EXISTS notes_search_idx ON notes USING gin(to_tsvector('english', title || ' ' || content));

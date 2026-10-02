@@ -1,0 +1,25 @@
+name: Render & Supabase Keep-Alive
+
+on:
+  schedule:
+    # Runs every 14 minutes to prevent Render free instance from sleeping (Render sleeps after 15 min of inactivity)
+    # and keeps Supabase DB active to prevent free tier auto-pausing.
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  keepalive:
+    name: Ping Render & Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Keep-Alive Endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret is not set yet. Please add it to GitHub Settings -> Secrets -> Actions."
+            exit 0
+          fi
+          echo "Pinging $BACKEND_URL/api/keep-alive?ping=true at $(date)"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" "$BACKEND_URL/api/keep-alive?ping=true")
+          echo "$RESPONSE"

@@ -235,10 +235,12 @@ const Dashboard: React.FC = () => {
         setSelectedNote(null);
         setIsPreview(false);
       }
-      toast.success(isPermanent ? 'Note permanently deleted' : 'Note moved to trash');
+      toast.success(isPermanent ? 'Note permanently deleted' : 'Note moved to trash', {
+        duration: 3000,
+      });
     } catch (err) {
       console.error('Delete note error:', err);
-      toast.error('Failed to delete note');
+      toast.error('Failed to delete note', { duration: 4000 });
     }
   }, [currentView]);
 
@@ -256,8 +258,8 @@ const Dashboard: React.FC = () => {
           <button 
             style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
             onClick={() => {
-              action();
               toast.dismiss(t.id);
+              action();
             }}
           >
             Delete
@@ -290,8 +292,10 @@ const Dashboard: React.FC = () => {
         setSelectedNote(null);
         setIsPreview(false);
       }
+      toast.success('Note restored', { duration: 3000 });
     } catch (err) {
       console.error('Restore note error:', err);
+      toast.error('Failed to restore note', { duration: 4000 });
     }
   }, []);
 

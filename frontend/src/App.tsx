@@ -47,10 +47,19 @@ function App() {
         <Toaster 
           position="bottom-right"
           toastOptions={{
+            duration: 3000,
             style: {
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
-              border: '1px solid var(--border-color)'
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+            },
+            success: {
+              duration: 3000,
+            },
+            error: {
+              duration: 4000,
             }
           }}
         />

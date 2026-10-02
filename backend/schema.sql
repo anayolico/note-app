@@ -1,6 +1,7 @@
--- Run this in your Neon SQL Editor to create the users table
+-- Run this in your Supabase SQL Editor to create the users table
+-- Note: users.id matches Supabase Auth UID (auth.users.id)
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY, -- This will match Supabase Auth UID
+  id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
@@ -8,5 +9,5 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Note: In a real app, we would also add an index on email
--- CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
+-- Index on email for fast lookups
+CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);

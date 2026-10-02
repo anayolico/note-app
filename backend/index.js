@@ -15,9 +15,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Neon Database Connection
+// Database Connection (Supabase PostgreSQL / Connection Pooler)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') 
+    ? { rejectUnauthorized: false } 
+    : false,
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client:', err);
 });
 
 // Automatic Database Initialization
@@ -43,12 +50,63 @@ const initDb = async () => {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE INDEX IF NOT EXISTS notes_user_id_idx ON notes (user_id);
     `);
     console.log('Database tables initialized successfully.');
+    // Trigger initial keep-alive ping on startup
+    await pingDatabase('startup');
   } catch (err) {
     console.error('Failed to initialize database tables:', err);
   }
 };
+
+// --- Supabase Activity Keep-Alive Worker ---
+// Supabase free tier projects pause after 7 days of inactivity.
+// This scheduled task pings the database every 48 hours (configurable) to maintain activity.
+const KEEP_ALIVE_INTERVAL_HOURS = parseFloat(process.env.KEEP_ALIVE_INTERVAL_HOURS || '48');
+const KEEP_ALIVE_INTERVAL_MS = KEEP_ALIVE_INTERVAL_HOURS * 60 * 60 * 1000;
+
+let lastKeepAlivePing = null;
+let keepAliveStatus = 'initialized';
+
+const pingDatabase = async (triggerType = 'scheduled') => {
+  try {
+    const startTime = Date.now();
+    const result = await pool.query('SELECT NOW() as current_time, COUNT(*)::int as note_count FROM notes;');
+    const duration = Date.now() - startTime;
+    
+    lastKeepAlivePing = {
+      timestamp: new Date().toISOString(),
+      durationMs: duration,
+      dbTime: result.rows[0]?.current_time,
+      noteCount: result.rows[0]?.note_count,
+      triggerType,
+      status: 'success',
+    };
+    keepAliveStatus = 'active';
+    console.log(`[Keep-Alive Ping] (${triggerType}) Database pinged successfully in ${duration}ms at ${lastKeepAlivePing.timestamp}`);
+    return lastKeepAlivePing;
+  } catch (err) {
+    keepAliveStatus = 'error';
+    lastKeepAlivePing = {
+      timestamp: new Date().toISOString(),
+      error: err.message,
+      triggerType,
+      status: 'failed',
+    };
+    console.error(`[Keep-Alive Ping] (${triggerType}) Database ping failed:`, err.message);
+    return lastKeepAlivePing;
+  }
+};
+
+// Start background interval
+if (KEEP_ALIVE_INTERVAL_HOURS > 0) {
+  console.log(`Keep-alive background task configured: runs every ${KEEP_ALIVE_INTERVAL_HOURS} hours (${KEEP_ALIVE_INTERVAL_MS}ms).`);
+  setInterval(() => {
+    pingDatabase('scheduled');
+  }, KEEP_ALIVE_INTERVAL_MS);
+}
 
 initDb();
 
@@ -59,7 +117,7 @@ app.get('/api/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ 
       status: 'ok', 
-      message: 'Mindful Canvas API is running',
+      message: 'Mindful Canvas API is running (Supabase DB)',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
@@ -81,7 +139,7 @@ app.get('/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ 
       status: 'ok', 
-      message: 'Mindful Canvas API is running',
+      message: 'Mindful Canvas API is running (Supabase DB)',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
@@ -95,6 +153,22 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+});
+
+// Keep-Alive status and manual trigger endpoint
+app.get('/api/keep-alive', async (req, res) => {
+  const shouldPing = req.query.ping === 'true';
+  let pingResult = lastKeepAlivePing;
+  if (shouldPing || !lastKeepAlivePing) {
+    pingResult = await pingDatabase('api_request');
+  }
+
+  res.json({
+    status: keepAliveStatus,
+    intervalHours: KEEP_ALIVE_INTERVAL_HOURS,
+    uptimeSeconds: Math.floor(process.uptime()),
+    lastPing: pingResult,
+  });
 });
 
 // Logout Endpoint

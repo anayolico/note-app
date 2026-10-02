@@ -1,6 +1,6 @@
 # Mindful Canvas - Backend API
 
-This is the backend API server for the Mindful Canvas Note App, built with Node.js, Express, and PostgreSQL. It manages user synchronization from Supabase and handles all note-taking CRUD operations (including soft deleting to a trash bin and permanent deletion).
+This is the backend API server for the Mindful Canvas Note App, built with Node.js, Express, and Supabase PostgreSQL. It manages user synchronization from Supabase Auth, handles note-taking CRUD operations (including soft deleting to a trash bin and permanent deletion), and includes an automatic **Keep-Alive worker** to prevent Supabase free tier inactivity auto-pausing.
 
 ---
 
@@ -8,7 +8,8 @@ This is the backend API server for the Mindful Canvas Note App, built with Node.
 
 - **Runtime**: [Node.js](https://nodejs.org/)
 - **Framework**: [Express](https://expressjs.com/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/) (accessed via `pg` driver)
+- **Database**: [Supabase PostgreSQL](https://supabase.com/) (accessed via `pg` driver with SSL)
+- **Auth**: [Supabase Auth](https://supabase.com/docs/guides/auth)
 - **CORS**: Enabled with credential support, dynamic origin matching the frontend
 
 ---
@@ -17,11 +18,12 @@ This is the backend API server for the Mindful Canvas Note App, built with Node.
 
 ```
 backend/
-├── index.js             # Main server logic and API routes
+├── index.js             # Main server logic, API routes, and Keep-Alive worker
 ├── package.json         # Node dependencies and scripts
 ├── .env                 # Local environment variables (git-ignored)
 ├── .env.example         # Template for environment variables
-└── schema.sql           # Database schema definition reference
+├── schema.sql           # Database schema for users table
+└── notes_table.sql      # Database schema for notes table
 ```
 
 ---
@@ -30,17 +32,20 @@ backend/
 
 ### 1. Prerequisites
 - Node.js installed (v16+)
-- A PostgreSQL database instance (e.g., Neon Postgres, local Postgres, or Supabase PostgreSQL)
+- A Supabase project ([supabase.com](https://supabase.com))
 
 ### 2. Environment Setup
-Copy `.env.example` to a new file named `.env` and fill in your connection details:
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 Update the `.env` file with your config:
 - `PORT`: Port the server runs on (defaults to `3001`).
-- `DATABASE_URL`: PostgreSQL connection URL (e.g. `postgresql://...`).
-- `FRONTEND_URL`: URL of the frontend (defaults to allowing all if not specified, useful for CORS).
+- `DATABASE_URL`: Your Supabase PostgreSQL connection string URI.
+  - Recommended: Supabase Connection Pooler (`aws-0-[region].pooler.supabase.com:6543/postgres?sslmode=require`).
+  - Or Direct Connection (`db.[project-ref].supabase.co:5432/postgres?sslmode=require`).
+- `KEEP_ALIVE_INTERVAL_HOURS`: Interval in hours between automated database pings (default `48` hours / every 2 days).
+- `FRONTEND_URL`: URL of the frontend (e.g. `http://localhost:5173`).
 - `SUPABASE_JWT_SECRET`: Secret key used if verifying JWTs from Supabase.
 
 ### 3. Installation
@@ -65,89 +70,40 @@ npm start
 ---
 
 ## Database Initialization
-The server executes an automatic table initialization script upon startup:
-- **`users` Table**: Stores synchronized user profiles (ID from Supabase, Email, Name, Avatar URL).
+The server automatically executes table initialization upon startup:
+- **`users` Table**: Stores synchronized user profiles (ID from Supabase Auth UID, Email, Name, Avatar URL).
 - **`notes` Table**: Stores notes linked to users, supporting soft delete status (`is_trash`), creation, and update timestamps.
+
+You can also run `schema.sql` and `notes_table.sql` manually in the **Supabase Dashboard -> SQL Editor**.
+
+---
+
+## Keep-Alive Background Worker
+Supabase free tier automatically pauses inactive projects after 7 days without activity.
+This backend features an automated keep-alive background worker:
+- **Scheduled Ping**: Automatically queries the database every 48 hours (`SELECT NOW() as current_time, COUNT(*)::int as note_count FROM notes;`).
+- **Initial Startup Ping**: Tests database connectivity as soon as the server boots up.
+- **Keep-Alive Endpoint**: `GET /api/keep-alive` displays the last ping timestamp, ping duration, and server status. Adding `?ping=true` triggers an immediate manual ping.
 
 ---
 
 ## API Endpoints
 
-### 1. Health Checks
+### 1. Health & Keep-Alive Checks
 - **`GET /health`** or **`GET /api/health`**
-  - **Description**: Verifies that the API server is alive and queries the PostgreSQL database (`SELECT 1`) to verify connection integrity.
-  - **Success Response**: `200 OK`
-    ```json
-    {
-      "status": "ok",
-      "message": "Mindful Canvas API is running",
-      "database": "connected",
-      "timestamp": "2026-08-05T20:30:00.000Z"
-    }
-    ```
-  - **Error Response**: `500 Internal Server Error` (if DB connection fails)
-    ```json
-    {
-      "status": "error",
-      "message": "API is running but database connection failed",
-      "database": "disconnected",
-      "error": "Error details...",
-      "timestamp": "2026-08-05T20:30:00.000Z"
-    }
-    ```
+  - Verifies that the API server is alive and queries PostgreSQL (`SELECT 1`).
+- **`GET /api/keep-alive`**
+  - Returns keep-alive worker status, uptime, and last ping details.
+  - Query parameter `?ping=true` triggers a real-time database ping.
 
-### 2. Authentication
-- **`POST /api/auth/logout`**
-  - **Description**: Clears access, refresh, and session cookies. Responds with instructions for the client to clean up local storage storage.
-  - **Success Response**: `200 OK`
-    ```json
-    {
-      "message": "Logged out successfully",
-      "clearStoragePrefixes": ["sb-"],
-      "clearStorageKeys": ["supabase.auth.token"]
-    }
-    ```
+### 2. Authentication & User Sync
+- **`POST /api/auth/logout`**: Clears access, refresh, and session cookies.
+- **`POST /api/users/sync`**: Synchronizes a newly authenticated or updated user from Supabase to the PostgreSQL database.
 
-### 3. User Synchronization
-- **`POST /api/users/sync`**
-  - **Description**: Synchronizes a newly authenticated or updated user from Supabase to the local PostgreSQL database.
-  - **Request Body**:
-    ```json
-    {
-      "id": "uuid",
-      "email": "user@example.com",
-      "full_name": "Jane Doe",
-      "avatar_url": "https://..."
-    }
-    ```
-  - **Success Response**: `200 OK` with user details.
-
-### 4. Notes API
-- **`GET /api/notes?userId=<id>`**
-  - **Description**: Returns all non-trashed notes for the specified user, ordered by `updated_at` descending.
-- **`POST /api/notes`**
-  - **Description**: Creates a new note for the user.
-  - **Request Body**:
-    ```json
-    {
-      "userId": "uuid",
-      "title": "My Note Title",
-      "content": "Note markdown content"
-    }
-    ```
-- **`PATCH /api/notes/:id`**
-  - **Description**: Updates fields of a specific note (auto-saves `title` / `content` / `is_trash`).
-  - **Request Body**:
-    ```json
-    {
-      "title": "Updated Title",
-      "content": "Updated content",
-      "is_trash": false
-    }
-    ```
-- **`GET /api/notes/trash?userId=<id>`**
-  - **Description**: Returns all soft-deleted notes (`is_trash = true`) for the specified user.
-- **`DELETE /api/notes/:id`**
-  - **Description**: Soft deletes a note by setting its `is_trash` flag to `true`.
-- **`DELETE /api/notes/:id/permanent`**
-  - **Description**: Permanently deletes a note record from the database.
+### 3. Notes API
+- **`GET /api/notes?userId=<id>`**: Returns non-trashed notes for user.
+- **`POST /api/notes`**: Creates a new note (`{ userId, title, content }`).
+- **`PATCH /api/notes/:id`**: Updates note fields (title, content, is_trash).
+- **`GET /api/notes/trash?userId=<id>`**: Returns all soft-deleted notes (`is_trash = true`).
+- **`DELETE /api/notes/:id`**: Soft-deletes a note (moves to trash).
+- **`DELETE /api/notes/:id/permanent`**: Permanently deletes a note record from the database.
