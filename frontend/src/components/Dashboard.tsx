@@ -286,22 +286,22 @@ const Dashboard: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button 
             style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-primary)' }}
-            onClick={() => toast.dismiss(t.id)}
+            onClick={() => toast.remove(t.id)}
           >
             Cancel
           </button>
           <button 
             style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
             onClick={() => {
-              toast.dismiss(t.id);
-              action();
+              toast.remove(t.id);          // Remove instantly (no animation hang)
+              setTimeout(action, 100);     // Let React flush before showing next toast
             }}
           >
             Delete
           </button>
         </div>
       </div>
-    ), { duration: 5000 });
+    ), { duration: Infinity }); // Keep open until user responds
   };
 
   const restoreNote = useCallback(async (id: string, e?: React.MouseEvent) => {
