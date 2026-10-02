@@ -230,7 +230,11 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify({ title: note.title, content: note.content }),
       });
       setSaveStatus('saved');
-      setActiveNotes(prev => prev ? prev.map(n => n.id === note.id ? { ...n, title: note.title, content: note.content, updated_at: new Date().toISOString() } : n) : null);
+      setActiveNotes(prev => {
+        const updated = prev ? prev.map(n => n.id === note.id ? { ...n, title: note.title, content: note.content, updated_at: new Date().toISOString() } : n) : null;
+        if (updated && note.id) setCachedData(`notes_${selectedNoteRef.current?.id ?? note.id}`, updated);
+        return updated;
+      });
     } catch (err) {
       console.error('Manual save error:', err);
     }
@@ -245,7 +249,10 @@ const Dashboard: React.FC = () => {
       await fetch(`${API_URL}${endpoint}`, { method: 'DELETE' });
       
       if (isPermanent) {
-        setTrashNotes(prev => prev ? prev.filter(n => n.id !== id) : null);
+        setTrashNotes(prev => {
+          const updated = prev ? prev.filter(n => n.id !== id) : null;
+          return updated;
+        });
       } else {
         setActiveNotes(prevActive => {
           if (!prevActive) return null;
@@ -254,7 +261,8 @@ const Dashboard: React.FC = () => {
             const updatedNote = { ...noteToTrash, is_trash: true, updated_at: new Date().toISOString() };
             setTrashNotes(prevTrash => prevTrash ? [updatedNote, ...prevTrash] : null);
           }
-          return prevActive.filter(n => n.id !== id);
+          const updated = prevActive.filter(n => n.id !== id);
+          return updated;
         });
       }
       
@@ -310,7 +318,10 @@ const Dashboard: React.FC = () => {
         const noteToRestore = prevTrash.find(n => n.id === id);
         if (noteToRestore) {
           const restoredNote = { ...noteToRestore, is_trash: false, updated_at: new Date().toISOString() };
-          setActiveNotes(prevActive => prevActive ? [restoredNote, ...prevActive] : null);
+          setActiveNotes(prevActive => {
+            const updated = prevActive ? [restoredNote, ...prevActive] : [restoredNote];
+            return updated;
+          });
         }
         return prevTrash.filter(n => n.id !== id);
       });
