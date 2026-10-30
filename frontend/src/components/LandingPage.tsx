@@ -65,11 +65,6 @@ const LandingPage: React.FC = () => {
       <div className="landing-container">
         <Header onLogin={handleGoogleLogin} />
         <main className="hero-section">
-          <div className="badge">
-            <span className="dot"></span>
-            Now in Early Access
-          </div>
-          
           <h1 className="hero-title">
             Your thoughts,<br />
             <span className="gradient-text">beautifully captured.</span>
