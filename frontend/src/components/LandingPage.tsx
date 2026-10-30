@@ -69,11 +69,6 @@ const LandingPage: React.FC = () => {
             Your thoughts,<br />
             <span className="gradient-text">beautifully captured.</span>
           </h1>
-          
-          <p className="hero-description">
-            Escape the noise. Mindful Canvas provides a serene, distraction-free environment 
-            designed to give your ideas the breathing room they deserve.
-          </p>
 
           <div className="auth-actions">
             <button 
